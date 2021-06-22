@@ -1,4 +1,4 @@
-FROM nvidia/cudagl:10.0-devel-ubuntu18.04
+FROM nvidia/cudagl:11.0-devel-ubuntu18.04
 
 # TensorFlow version is tightly coupled to CUDA and cuDNN so it should be selected carefully
 ENV DISPLAY=:1 \
@@ -27,15 +27,9 @@ COPY ./src/ubuntu/install/ $INST_SCRIPTS/
 COPY ./src/common/xfce/ $INST/
 COPY ./src/common/scripts $STARTUPDIR
 COPY ./src/ubuntu/repo/sshd_config /etc/ssh/
-#ADD ./src/ubuntu/repo/nccl_2.4.7-1+cuda10.0_x86_64.txz /usr/local
 ADD ./src/homeinit/ $INST/
 
-#RUN      echo "  " >> /etc/resolv.conf \
-#         && echo "nameserver 8.8.8.8" >> /etc/resolv.conf \
-#        && tail /etc/resolv.conf
-
 RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
-
 RUN apt-get update -y \
         && apt-get install -y --allow-downgrades --allow-change-held-packages --no-install-recommends \
         build-essential \
@@ -70,13 +64,12 @@ RUN apt-get update -y \
         && apt autoremove -y \
         && rm -rf /var/lib/apt/lists/*
 
-# Install cmake
+# Install related tools
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh\
     && mkdir /opt/cmake \
     && sh cmake-3.13.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license \
     && ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake \
     && cmake --version
-
 RUN find $INST_SCRIPTS -name '*.sh' -exec chmod a+x {} + \
     && $INST_SCRIPTS/tools.sh \
     && $INST_SCRIPTS/install_custom_fonts.sh \
@@ -91,23 +84,25 @@ RUN find $INST_SCRIPTS -name '*.sh' -exec chmod a+x {} + \
     && $INST_SCRIPTS/set_user_permission.sh $STARTUPDIR $HOME $INST \
     && apt clean -y \
     && apt autoremove -y
-
 RUN apt install -y sshpass libtool libtool-bin
-# ADD ./src/common/zeromq-4.1.0/ /usr/local/zeromq-4.1.0/
-# RUN $INST_SCRIPTS/zeromq.sh
 
+
+#install ros, ros2 and webots
+COPY ./src/ros/install_ros.sh /$HOME/installation_dep/
+RUN sh /$HOME/installation_dep/install_ros.sh
+COPY ./src/ros/install_webots.sh /$HOME/installation_dep/
+RUN sh /$HOME/installation_dep/install_webots.sh
+COPY ./src/ros/install_ros2.sh /$HOME/installation_dep/
+RUN sh /$HOME/installation_dep/install_ros2.sh
+
+#===================important=================
 COPY ./src/common/start_scripts/ $STARTUPDIR/
 COPY ./src/common/bin/ /usr/local/bin/
-
-#installation for project dependecy
-COPY ./dep /$HOME/installation_dep/
-RUN sh /$HOME/installation_dep/install_dependency.sh
-
-WORKDIR $HOME
+COPY ./src/startup/ $STARTUPDIR/
+RUN $INST_SCRIPTS/set_user_permission.sh $STARTUPDIR 
 
 # add users
-
+WORKDIR $HOME
 USER 0
-
-ENTRYPOINT ["/dockerstartup/vnc_startup.sh"]
+ENTRYPOINT ["/dockerstartup/sim_startup.sh"]
 CMD ["--wait"]
