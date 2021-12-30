@@ -1,4 +1,4 @@
-FROM nvidia/cudagl:11.0-devel-ubuntu18.04
+FROM nvidia/cudagl:10.2-devel-ubuntu18.04
 
 # TensorFlow version is tightly coupled to CUDA and cuDNN so it should be selected carefully
 ENV DISPLAY=:1 \
@@ -20,8 +20,6 @@ ENV HOME=/root \
     LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 WORKDIR $HOME
 
-ENV NCCL_VERSION=2.4.7-1+cuda10.0
-
 COPY ./src/common/install/ $INST_SCRIPTS/
 COPY ./src/ubuntu/install/ $INST_SCRIPTS/
 COPY ./src/common/xfce/ $INST/
@@ -39,8 +37,6 @@ RUN apt-get update -y \
         vim \
         wget \
         ca-certificates \
-        libnccl2=${NCCL_VERSION} \
-        libnccl-dev=${NCCL_VERSION} \
         libjpeg-dev \
         libpng-dev \
         libnuma-dev \
@@ -110,27 +106,6 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
     && apt-get -y update && apt-get -y install google-cloud-sdk 
 
 ENV PATH="/opt/conda/condabin:${PATH}"
-COPY ./src/customize/conda_env.yml /$HOME/installation_dep/
-RUN conda env create -f /$HOME/installation_dep/conda_env.yml 
-
-SHELL ["/bin/bash", "--login", "-c"]
-RUN conda init bash
-RUN conda activate decision-transformer-atari \
-    && pip install jupyter 
-RUN conda activate decision-transformer-atari \
-    && pip uninstall -y torch \
-    && pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
-
-RUN conda create --name ray python=3.8.11
-RUN conda activate ray \
-    && pip install ray \  
-    && pip install gym-minigrid \
-    && pip install 'ray[tune]' \
-    && pip install 'ray[rllib]' \
-    && pip install pandas torch
-
-#add install for paprallel torch module - deepspeed
-RUN apt install -y libopenmpi-dev  
 COPY ./src/customize/conda_env_minigrid.yml /$HOME/installation_dep/
 RUN conda env create -f /$HOME/installation_dep/conda_env_minigrid.yml 
 
@@ -140,7 +115,17 @@ RUN conda activate decision-transformer-minigrid \
     && pip install jupyter 
 RUN conda activate decision-transformer-minigrid \
     && pip uninstall -y torch \
-    && pip install torch==1.9.0+cu111 torchvision==0.10.0+cu111 torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html
+    && pip install torch==1.8.2+cu102 torchvision==0.9.2+cu102 torchaudio==0.8.2 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
+
+RUN conda create --name ray python=3.8.11
+RUN conda activate ray \
+    && pip install ray \  
+    && pip install gym-minigrid \
+    && pip install 'ray[tune]' \
+    && pip install 'ray[rllib]' \
+    && pip install pandas torch
+
+
 
 #===================important=================
 COPY ./src/common/start_scripts/ $STARTUPDIR/

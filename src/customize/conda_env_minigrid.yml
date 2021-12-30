@@ -1,0 +1,25 @@
+name: decision-transformer-minigrid
+channels:
+- pytorch
+dependencies:
+- python=3.8.11
+- pip
+- pip:
+  - atari-py
+  - pyprind
+  - absl-py
+  - gin-config
+  - gym
+  - tqdm
+  - blosc
+  - git+https://github.com/google/dopamine.git
+  - gym-minigrid
+  - opencv-python
+  - ray
+  - 'ray[rllib]'
+  - wandb
+  - seaborn
+  - seaborn
+  - deepspeed
+  - mpi4py
+  - fairscale
